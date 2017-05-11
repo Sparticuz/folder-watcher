@@ -1,15 +1,14 @@
 # Parameters
 param (
-  [string]$folder = "C:\test", # Enter the root path you want to monitor.
-  [string]$filter = '*.*', # You can enter a wildcard filter here.
-  [bool]$includesubdir = $true, # In the following line, you can change 'IncludeSubdirectories to $true if required.
-  [string]$slackUri = "",
-  [string]$slackChannel = ""
+    [Parameter(Mandatory=$true)][string]$folder = "", # Enter the root path you want to monitor.
+    [string]$filter = '*.*', # You can enter a wildcard filter here.
+    [bool]$includesubdir = $true, # In the following line, you can change 'IncludeSubdirectories to $false if required.
+    [Parameter(Mandatory=$true)][string]$slackUri = "",
+    [Parameter(Mandatory=$true)][string]$slackChannel = ""
 )
 
 if(-Not (Test-Path $folder)){
-    Write-Error "$folder does not exist."
-    exit
+    Throw "$folder does not exist."
 }
 
 Import-Module .\PSSlack\PSSlack.psm1
