@@ -5,6 +5,7 @@ param (
     [bool]$includesubdir = $true, # In the following line, you can change 'IncludeSubdirectories to $false if required.
     [Parameter(Mandatory=$true)][string]$slackUri = "",
     [Parameter(Mandatory=$true)][string]$slackChannel = "",
+    [string]$slackUser = "Resilio Sync",
     [bool]$fsCreated = $true,
     [bool]$fsDeleted = $true,
     [bool]$fsChanged = $true
@@ -19,7 +20,7 @@ Import-Module .\PSSlack\PSSlack.psm1
 $slack = [PSCustomObject]@{
     uri = $slackUri
     channel = $slackChannel
-    username = "Resilio Sync"
+    username = $slackUser
     icon = ":dart:"
 }
 
