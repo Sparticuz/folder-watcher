@@ -15,7 +15,17 @@ if(-Not (Test-Path $folder)){
     Throw "$folder does not exist."
 }
 
-Import-Module .\PSSlack\PSSlack.psm1
+if (!(Get-Module -ListAvailable -Name PSSlack)) {
+    Write-Host "PSSlack not available, Installing from PowerShell Gallery..."
+    try {
+        Install-Module -Name PSSlack -Scope CurrentUser
+    } catch {
+        Throw $_.Exception.Message
+    }
+}
+
+Import-Module PSSlack
+
 # Set up Slack parameters
 $slack = [PSCustomObject]@{
     uri = $slackUri
