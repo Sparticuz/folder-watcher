@@ -1,42 +1,68 @@
-#By BigTeddy 05 September 2011
+# Parameters
+param (
+  [string]$folder = "C:\test", # Enter the root path you want to monitor.
+  [string]$filter = '*.*', # You can enter a wildcard filter here.
+  [bool]$includesubdir = $true, # In the following line, you can change 'IncludeSubdirectories to $true if required.
+  [string]$slackUri = "",
+  [string]$slackChannel = ""
+)
 
-#This script uses the .NET FileSystemWatcher class to monitor file events in folder(s).
-#The advantage of this method over using WMI eventing is that this can monitor sub-folders.
-#The -Action parameter can contain any valid Powershell commands.  I have just included two for example.
-#The script can be set to a wildcard filter, and IncludeSubdirectories can be changed to $true.
-#You need not subscribe to all three types of event.  All three are shown for example.
-# Version 1.1
+if(-Not (Test-Path $folder)){
+    Write-Error "$folder does not exist."
+    exit
+}
 
-$folder = 'c:\scripts\test' # Enter the root path you want to monitor.
-$filter = '*.*'  # You can enter a wildcard filter here.
+Import-Module .\PSSlack\PSSlack.psm1
+# Set up Slack parameters
+$slack = [PSCustomObject]@{
+    uri = $slackUri
+    channel = $slackChannel
+    username = "Resilio Sync"
+    icon = ":dart:"
+}
 
-# In the following line, you can change 'IncludeSubdirectories to $true if required.                          
-$fsw = New-Object IO.FileSystemWatcher $folder, $filter -Property @{IncludeSubdirectories = $false;NotifyFilter = [IO.NotifyFilters]'FileName, LastWrite'}
+$fsw = New-Object IO.FileSystemWatcher $folder, $filter -Property @{IncludeSubdirectories = $includesubdir;NotifyFilter = [IO.NotifyFilters]'FileName, LastWrite'}
 
 # Here, all three events are registerd.  You need only subscribe to events that you need:
 
-Register-ObjectEvent $fsw Created -SourceIdentifier FileCreated -Action {
+Register-ObjectEvent $fsw Created -SourceIdentifier FileCreated -MessageData $slack -Action {
+$name       = $Event.SourceEventArgs.Name
+$changeType = $Event.SourceEventArgs.ChangeType
+$timeStamp  = $Event.TimeGenerated
+$slack      = $Event.MessageData
+#Write-Host "The file '$name' was $changeType at $timeStamp" -fore green
+Send-SlackMessage   -Uri $slack.uri `
+                    -Channel $slack.channel `
+                    -Parse full `
+                    -Username $slack.username `
+                    -IconEmoji $slack.icon `
+                    -Text "The file '$name' was $changeType at $timeStamp"
+}
+
+Register-ObjectEvent $fsw Deleted -SourceIdentifier FileDeleted -MessageData $slack -Action {
 $name = $Event.SourceEventArgs.Name
 $changeType = $Event.SourceEventArgs.ChangeType
 $timeStamp = $Event.TimeGenerated
-Write-Host "The file '$name' was $changeType at $timeStamp" -fore green
-Out-File -FilePath c:\scripts\filechange\outlog.txt -Append -InputObject "The file '$name' was $changeType at $timeStamp"}
+$slack = $Event.MessageData
+#Write-Host "The file '$name' was $changeType at $timeStamp" -fore red
+Send-SlackMessage   -Uri $slack.uri `
+                    -Channel $slack.channel `
+                    -Parse full `
+                    -Username $slack.username `
+                    -IconEmoji $slack.icon `
+                    -Text "The file '$name' was $changeType at $timeStamp"
+}
 
-Register-ObjectEvent $fsw Deleted -SourceIdentifier FileDeleted -Action {
+Register-ObjectEvent $fsw Changed -SourceIdentifier FileChanged -MessageData $slack -Action {
 $name = $Event.SourceEventArgs.Name
 $changeType = $Event.SourceEventArgs.ChangeType
 $timeStamp = $Event.TimeGenerated
-Write-Host "The file '$name' was $changeType at $timeStamp" -fore red
-Out-File -FilePath c:\scripts\filechange\outlog.txt -Append -InputObject "The file '$name' was $changeType at $timeStamp"}
-
-Register-ObjectEvent $fsw Changed -SourceIdentifier FileChanged -Action {
-$name = $Event.SourceEventArgs.Name
-$changeType = $Event.SourceEventArgs.ChangeType
-$timeStamp = $Event.TimeGenerated
-Write-Host "The file '$name' was $changeType at $timeStamp" -fore white
-Out-File -FilePath c:\scripts\filechange\outlog.txt -Append -InputObject "The file '$name' was $changeType at $timeStamp"}
-
-# To stop the monitoring, run the following commands:
-# Unregister-Event FileDeleted
-# Unregister-Event FileCreated
-# Unregister-Event FileChanged
+$slack = $Event.MessageData
+#Write-Host "The file '$name' was $changeType at $timeStamp" -fore white
+Send-SlackMessage   -Uri $slack.uri `
+                    -Channel $slack.channel `
+                    -Parse full `
+                    -Username $slack.username `
+                    -IconEmoji $slack.icon `
+                    -Text "The file '$name' was $changeType at $timeStamp"
+}
