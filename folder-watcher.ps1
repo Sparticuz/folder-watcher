@@ -16,7 +16,7 @@ if(-Not (Test-Path $folder)){
 }
 
 if (!(Get-Module -ListAvailable -Name PSSlack)) {
-    Write-Host "PSSlack not available, Installing from PowerShell Gallery..."
+    Write-Host "PSSlack is not available, Installing from PowerShell Gallery..."
     try {
         Install-Module -Name PSSlack -Scope CurrentUser
     } catch {
